@@ -1,18 +1,9 @@
-﻿using AuctionService.DTOs.Items;
-using AuctionService.Entities;
-using AutoMapper;
-using AutoMapper.Configuration.Annotations;
+﻿using MongoDB.Entities;
 
-namespace AuctionService.DTOs.Auctions;
+namespace SearchService.Models;
 
-
-
-public class AuctionDTO
+public class Item : Entity
 {
-
-    public Guid Id { get; set; }
-
-
     public int ReservePrice { get; set; }
 
 
@@ -56,7 +47,4 @@ public class AuctionDTO
     public int Year { get; set; }
 
     public string ImageUrl { get; set; }
-
-
-
 }
