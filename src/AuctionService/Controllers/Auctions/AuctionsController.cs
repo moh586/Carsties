@@ -3,6 +3,8 @@ using AuctionService.DTOs.Auctions;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +16,13 @@ public class AuctionsController : ControllerBase
 {
     private readonly AuctionDbContext _auctionDbContext;
     private readonly IMapper _mapper;
-    public AuctionsController(AuctionDbContext auctionDbContext, IMapper mapper)
+    private readonly IPublishEndpoint _publishEndpoint;
+
+    public AuctionsController(AuctionDbContext auctionDbContext, IMapper mapper, IPublishEndpoint publishEndpoint)
     {
         _auctionDbContext = auctionDbContext;
         _mapper = mapper;
+        _publishEndpoint = publishEndpoint;
     }
 
     [HttpGet]
@@ -56,8 +61,11 @@ public class AuctionsController : ControllerBase
         var auction = _mapper.Map<Auction>(createAuctionDTO);
         auction.Seller = "test";
         await _auctionDbContext.Auctions.AddAsync(auction);
+        var newAuction = _mapper.Map<AuctionDTO>(auction);
+        await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
         var result = await _auctionDbContext.SaveChangesAsync() > 0;
-        return result ? CreatedAtAction(nameof(GetAuction), new { Id = auction.Id }, _mapper.Map<AuctionDTO>(auction)) : BadRequest();
+
+        return result ? CreatedAtAction(nameof(GetAuction), new { Id = auction.Id }, newAuction) : BadRequest();
     }
 
     [HttpPut("{id:Guid}")]
@@ -83,6 +91,7 @@ public class AuctionsController : ControllerBase
         _auctionDbContext.Auctions.Attach(auction);
         _auctionDbContext.Entry(auction).State = EntityState.Modified;
 
+        await _publishEndpoint.Publish(_mapper.Map<AuctionUpdated>(auction));
         var result = await _auctionDbContext.SaveChangesAsync() > 0;
         return result ? NoContent() : BadRequest();
 
@@ -97,6 +106,10 @@ public class AuctionsController : ControllerBase
             return NotFound();
         }
         _auctionDbContext.Auctions.Remove(auction);
+
+        //await _publishEndpoint.Publish<AuctionDeleted>(new AuctionDeleted{Id=auction.Id.ToString()});
+        await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(auction));
+
         var result = await _auctionDbContext.SaveChangesAsync() > 0;
         return result ? NoContent() : BadRequest();
     }
