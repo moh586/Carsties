@@ -25,6 +25,7 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumersFromNamespaceContaining<AuctionCreatedFaultConsumer>();
+    //x.AddConsumersFromNamespaceContaining<AuctionFinishedConsumer>();
 
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("auction", false));
 

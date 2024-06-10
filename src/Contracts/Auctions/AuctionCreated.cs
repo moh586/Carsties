@@ -29,6 +29,7 @@ public class AuctionCreated
     public DateTime AuctionEnd { get; set; }
 
 
+
     public string Status { get; set; }
 
 
