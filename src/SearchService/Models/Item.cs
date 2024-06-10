@@ -41,7 +41,7 @@ public class Item : Entity
     public string Color { get; set; }
 
 
-    public int? Milage { get; set; }
+    public int? Mileage { get; set; }
 
 
     public int Year { get; set; }

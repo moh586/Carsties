@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,6 +52,7 @@ public class AuctionsController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<AuctionDTO>> CreateAuction([FromBody] CreateAuctionDTO createAuctionDTO)
     {
@@ -59,7 +61,7 @@ public class AuctionsController : ControllerBase
             return BadRequest(ModelState);
         }
         var auction = _mapper.Map<Auction>(createAuctionDTO);
-        auction.Seller = "test";
+        auction.Seller = User.Identity.Name;
         await _auctionDbContext.Auctions.AddAsync(auction);
         var newAuction = _mapper.Map<AuctionDTO>(auction);
         await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
@@ -68,6 +70,7 @@ public class AuctionsController : ControllerBase
         return result ? CreatedAtAction(nameof(GetAuction), new { Id = auction.Id }, newAuction) : BadRequest();
     }
 
+    [Authorize]
     [HttpPut("{id:Guid}")]
     public async Task<ActionResult<AuctionDTO>> UpdateAuction(Guid id, [FromBody] UpdateAuctionDTO updateAuction)
     {
@@ -80,6 +83,7 @@ public class AuctionsController : ControllerBase
         {
             return NotFound("Auction Not Found");
         }
+        if (auction.Seller != User.Identity.Name) return Forbid();
         auction.Item.Make = updateAuction.Make ?? auction.Item.Make;
         auction.Item.Model = updateAuction.Model ?? auction.Item.Model;
         auction.Item.Color = updateAuction.Color ?? auction.Item.Color;
@@ -97,6 +101,7 @@ public class AuctionsController : ControllerBase
 
     }
 
+    [Authorize]
     [HttpDelete("{id:Guid}")]
     public async Task<ActionResult> DeleteAuction(Guid id)
     {
@@ -105,10 +110,11 @@ public class AuctionsController : ControllerBase
         {
             return NotFound();
         }
+        if (auction.Seller != User.Identity.Name) return Forbid();
         _auctionDbContext.Auctions.Remove(auction);
 
         //await _publishEndpoint.Publish<AuctionDeleted>(new AuctionDeleted{Id=auction.Id.ToString()});
-        await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(auction));
+        await _publishEndpoint.Publish(_mapper.Map<AuctionDeleted>(auction));
 
         var result = await _auctionDbContext.SaveChangesAsync() > 0;
         return result ? NoContent() : BadRequest();

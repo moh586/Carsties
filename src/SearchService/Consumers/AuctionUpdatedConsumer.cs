@@ -20,9 +20,16 @@ public class AuctionUpdatedConsumer : IConsumer<AuctionUpdated>
 
         var item = _mapper.Map<Item>(context.Message);
         var result = await DB.Update<Item>()
-        .MatchID(item.ID)
-        .ModifyWith(item)
-        .ExecuteAsync();
+            .Match(a => a.ID == context.Message.Id)
+            .ModifyOnly(x => new
+            {
+                x.Color,
+                x.Make,
+                x.Model,
+                x.Year,
+                x.Mileage
+            }, item)
+            .ExecuteAsync();
 
         if (!result.IsAcknowledged)
         {
