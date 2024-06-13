@@ -1,8 +1,11 @@
 using AuctionService.Consumers;
 using AuctionService.Data;
+using AuctionService.Services;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,10 +34,10 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMq:Host"],"/",host=>
+        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", host =>
         {
-            host.Username(builder.Configuration.GetValue("RabbitMq:Username","guest"));
-            host.Username(builder.Configuration.GetValue("RabbitMq:Username","guest"));
+            host.Username(builder.Configuration.GetValue("RabbitMq:Username", "guest"));
+            host.Username(builder.Configuration.GetValue("RabbitMq:Username", "guest"));
         });
         cfg.ConfigureEndpoints(context);
     });
@@ -50,6 +53,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 });
 
+builder.Services.AddGrpc();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -58,8 +64,15 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGrpcService<GrpcAuctionService>();
 
-try
+var retryPolicy = Policy
+    .Handle<NpgsqlException>()
+    .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(10));
+
+retryPolicy.ExecuteAndCapture(() => DbInitializer.InitDb(app));
+
+/* try
 {
     DbInitializer.InitDb(app);
 }
@@ -67,6 +80,6 @@ catch (System.Exception ex)
 {
 
     Console.WriteLine(ex.Message);
-}
+} */
 
 app.Run();

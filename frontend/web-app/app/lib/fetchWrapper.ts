@@ -56,7 +56,7 @@ async function handleResponse(response: Response) {
     let data;
     try {
         data = JSON.parse(text);
-    } catch (error) {   
+    } catch (error) {
         data = text;
     }
 
