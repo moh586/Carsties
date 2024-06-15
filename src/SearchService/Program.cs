@@ -8,6 +8,9 @@ using SearchService;
 using SearchService.Data;
 using SearchService.Models;
 using SearchService.Services;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +53,21 @@ builder.Services.AddMassTransit(x =>
         }); */
         cfg.ConfigureEndpoints(context);
     });
+});
+
+var Secret = builder.Configuration["Jwt:Key"];
+var key = Encoding.ASCII.GetBytes(Secret);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(x =>
+{
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        //ValidAudience = builder.Configuration["jwt:audience"]
+    };
 });
 
 var app = builder.Build();

@@ -32,11 +32,17 @@ services:
       - ASPNETCORE_URLS=http://+:7777
       - RabbitMq__Host=rabbitmq
       - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=madal586;Database=auctions
-      - IdentityServiceUrl=http://identity-svc
+      #- IdentityServiceUrl=http://identity-svc
+      - IdentityServiceUrl=http://auth-svc
       - Kestrel__Endpoints__Grpc__Protocols=Http2
       - Kestrel__Endpoints__Grpc__Url=http://+:7777
       - Kestrel__Endpoints__WebApi__Protocols=Http1
       - Kestrel__Endpoints__WebApi__Url=Http://+:80
+      - Jwt__Key=0c7edf939539419fa57d174985f4e8074cb2b891c8a2772944d822251ee750da
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__lifetime=360000000
     ports:
       - 7001:80
       - 7777:7777
@@ -57,6 +63,11 @@ services:
       - RabbitMq__Host=rabbitmq
       - ConnectionStrings__MongoDbConnection=mongodb://root:madal586@mongodb
       - AuctionServiceUrl=http://auction-svc
+      - Jwt__Key=0c7edf939539419fa57d174985f4e8074cb2b891c8a2772944d822251ee750da
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__lifetime=360000000
       #- Kestrel__Endpoints__Grpc__Protocols=Http2
       #- Kestrel__Endpoints__Grpc__Url=http://+:7777
       #- Kestrel__Endpoints__WebApi__Protocols=Http1
@@ -67,19 +78,39 @@ services:
     depends_on:
       - mongodb
       - rabbitmq
-  identity-svc:
-    image: moh586/identity-svc:latest
-    build: 
+#  identity-svc:
+#    image: moh586/identity-svc:latest
+#    build: 
+#      context: .
+#      dockerfile: src/IdentityService/Dockerfile
+#    environment:
+#      - ASPNETCORE_ENVIRONMENT=Docker
+#      - ASPNETCORE_URLS=http://+:80
+#      #- ClientApp=http://app.carsties.com
+#      - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=madal586;Database=identity
+#      #- VIRTUAL_HOST=id.carsties.com
+#    ports:
+#      - 5000:80
+#    depends_on:
+#      - postgres
+  auth-svc:
+    image: moh586/auth-svc:latest
+    build:
       context: .
-      dockerfile: src/IdentityService/Dockerfile
+      dockerfile: src/AuthService/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80
-      #- ClientApp=http://app.carsties.com
-      - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=madal586;Database=identity
+      - ClientApp=http:localhost:3000
+    #  - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=madal586;Database=identity_db;
+      - ConnectionStrings__DefaultConnection=Server=postgres:5432;Database=identity_db;Username=postgres;Password=madal586;
+      - Jwt__Key=0c7edf939539419fa57d174985f4e8074cb2b891c8a2772944d822251ee750da
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__lifetime=360000000
       #- VIRTUAL_HOST=id.carsties.com
     ports:
-      - 5000:80
+      - 5050:80
     depends_on:
       - postgres
   gateway-svc:
@@ -90,8 +121,12 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80
-      #- ClientApp=http://app.carsties.com
+      - ClientApp=http:localhost:3000
       - ConnectionStrings__DefaultConnection=Server=postgres:5432;User Id=postgres;Password=madal586;Database=identity
+      - Jwt__Key=0c7edf939539419fa57d174985f4e8074cb2b891c8a2772944d822251ee750da
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__lifetime=360000000
       #- VIRTUAL_HOST=id.carsties.com
     ports:
       - 6001:80
@@ -107,6 +142,10 @@ services:
       - ConnectionStrings__BidDbConnection=mongodb://root:madal586@mongodb
       - IdentityServiceUrl=http://identity-svc
       - GrpcAuction=http://auction-svc:7777
+      - Jwt__Key=0c7edf939539419fa57d174985f4e8074cb2b891c8a2772944d822251ee750da
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=https://localhost:5050
+      - Jwt__lifetime=360000000
     ports:
       - 7003:80
     depends_on:
